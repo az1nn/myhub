@@ -7,6 +7,10 @@ requires:
   - REQ-BOOT-002
   - REQ-BOOT-003
   - REQ-BOOT-004
+critical_requirements:
+  - REQ-BOOT-001
+  - REQ-BOOT-002
+  - REQ-BOOT-004
 constrained_by:
   - ADR-001
   - ADR-003
