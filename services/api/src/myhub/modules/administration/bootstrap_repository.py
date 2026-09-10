@@ -33,7 +33,13 @@ class BootstrapRepository:
         return family
 
     def create_owner(self, tenant_id: str, display_name: str) -> tuple[UserModel, MembershipModel]:
+        # Flush the referenced User explicitly before Membership. Without an ORM
+        # relationship, relying on unit-of-work ordering for two pending mapped
+        # objects is unnecessary ambiguity; PostgreSQL must see the FK parent first.
         user = UserModel(id=str(uuid.uuid4()), display_name=display_name)
+        self.session.add(user)
+        self.session.flush()
+
         membership = MembershipModel(
             id=str(uuid.uuid4()),
             tenant_id=tenant_id,
@@ -41,6 +47,6 @@ class BootstrapRepository:
             role="Owner",
             status="active",
         )
-        self.session.add_all([user, membership])
+        self.session.add(membership)
         self.session.flush()
         return user, membership
