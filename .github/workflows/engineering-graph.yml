@@ -1,0 +1,35 @@
+name: Engineering Graph
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  engineering-graph:
+    runs-on: ubuntu-latest
+
+    services:
+      neo4j:
+        image: neo4j:2026.07.1
+        env:
+          NEO4J_AUTH: neo4j/test-password
+        ports:
+          - 7687:7687
+          - 7474:7474
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Engineering graph scaffold check
+        run: |
+          python engineering-graph/sync/sync.py
+          python engineering-graph/validate/validate.py
+
+      # Replace the scaffold commands above with real Graph Sync + Cypher gates
+      # before the first application feature is merged.

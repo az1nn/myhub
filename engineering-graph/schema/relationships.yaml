@@ -1,0 +1,38 @@
+version: 1
+
+relationships:
+  - from: Requirement
+    type: REALIZED_BY
+    to: Spec
+
+  - from: Spec
+    type: CONSTRAINED_BY
+    to: ADR
+
+  - from: Spec
+    type: DECOMPOSED_INTO
+    to: Task
+
+  - from: Spec
+    type: DEPENDS_ON
+    to: Spec
+
+  - from: Task
+    type: DEPENDS_ON
+    to: Task
+
+  - from: Task
+    type: IMPLEMENTED_BY
+    to: CodeArtifact
+
+  - from: Task
+    type: VALIDATED_BY
+    to: Test
+
+  - from: PullRequest
+    type: IMPLEMENTS
+    to: Task
+
+  - from: PullRequest
+    type: CHANGES
+    to: CodeArtifact

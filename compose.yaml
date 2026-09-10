@@ -1,0 +1,4 @@
+# Structural placeholder.
+# Docker Compose is the canonical runtime, but service images/configuration
+# should be finalized only after the Architecture Spec.
+services: {}

@@ -1,0 +1,30 @@
+version: 1
+
+nodes:
+  Requirement:
+    key: id
+    properties: [id, title, status, critical, source_path]
+
+  Spec:
+    key: id
+    properties: [id, title, status, source_path]
+
+  ADR:
+    key: id
+    properties: [id, title, status, source_path]
+
+  Task:
+    key: id
+    properties: [id, title, status, priority, source_path]
+
+  CodeArtifact:
+    key: path
+    properties: [path, kind]
+
+  Test:
+    key: path
+    properties: [path, kind]
+
+  PullRequest:
+    key: number
+    properties: [number, title, state, url, head_sha, base_sha]
