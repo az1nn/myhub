@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 set -euo pipefail
-python engineering-graph/sync/sync.py
+PYTHONPATH=engineering-graph python -m sync.sync --repo-root . "$@"
