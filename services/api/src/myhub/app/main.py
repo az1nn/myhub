@@ -10,6 +10,7 @@ from myhub.infrastructure.db.session import build_engine, build_session_factory
 from myhub.infrastructure.identity import Ed25519InstanceIdentityProvider
 from myhub.modules.administration.bootstrap_service import BootstrapError
 from myhub.modules.administration.config import Settings, get_settings
+from myhub.modules.identity.asset_links import well_known_router
 
 
 def create_app(*, settings: Settings | None = None, engine: Engine | None = None) -> FastAPI:
@@ -25,5 +26,6 @@ def create_app(*, settings: Settings | None = None, engine: Engine | None = None
     app.add_middleware(RequestIdMiddleware)
     app.add_exception_handler(BootstrapError, bootstrap_error_handler)
     app.add_exception_handler(Exception, internal_error_handler)
+    app.include_router(well_known_router)
     app.include_router(router)
     return app
