@@ -157,18 +157,33 @@ class AuthService:
         challenge_token: str,
         credential: dict[str, Any],
     ) -> SessionResult:
+        """Verify the initial Owner ceremony without making challenge replayable.
+
+        Challenge consumption commits before WebAuthn verification. A malformed or
+        invalid assertion therefore burns the challenge rather than rolling its
+        consumed marker back with the failed credential transaction.
+        """
+
         try:
             with self.session.begin():
-                instance, owner, enrollment = self._initial_owner_context(bootstrap_token)
-                expected_challenge = self.challenges.consume(
-                    token=challenge_token,
-                    purpose=ChallengePurpose.REGISTRATION,
-                    user_id=owner.id,
-                )
-                verification = self._provider(instance).verify_registration(
-                    credential=credential,
-                    expected_challenge=expected_challenge,
-                )
+                instance, owner, _enrollment = self._initial_owner_context(bootstrap_token)
+                owner_id = owner.id
+                provider = self._provider(instance)
+
+            expected_challenge = self._consume_challenge_committed(
+                token=challenge_token,
+                purpose=ChallengePurpose.REGISTRATION,
+                user_id=owner_id,
+            )
+            verification = provider.verify_registration(
+                credential=credential,
+                expected_challenge=expected_challenge,
+            )
+
+            with self.session.begin():
+                _instance, owner, enrollment = self._initial_owner_context(bootstrap_token)
+                if owner.id != owner_id:
+                    raise AuthenticationUnavailable()
 
                 transports = credential.get("response", {}).get("transports")
                 self.session.add(
@@ -189,10 +204,10 @@ class AuthService:
                 issued_session = self.sessions.issue(user_id=owner.id)
                 return self._session_result(issued_session)
         except (ChallengeError, InvalidRegistrationResponse, ValueError) as exc:
-            self.session.rollback()
+            self._rollback_if_needed()
             raise InvalidCredentials() from exc
         except IntegrityError as exc:
-            self.session.rollback()
+            self._rollback_if_needed()
             raise CredentialConflict() from exc
 
     def initial_owner_password_enroll(
@@ -212,10 +227,10 @@ class AuthService:
                 issued_session = self.sessions.issue(user_id=owner.id)
                 return self._session_result(issued_session)
         except (LoginNameError, ValueError) as exc:
-            self.session.rollback()
+            self._rollback_if_needed()
             raise InvalidCredentials() from exc
         except IntegrityError as exc:
-            self.session.rollback()
+            self._rollback_if_needed()
             raise CredentialConflict() from exc
 
     # ----- Passkey authentication ---------------------------------------------
@@ -237,7 +252,7 @@ class AuthService:
                     public_key=json.loads(options_to_json(options)),
                 )
         except AuthenticationThrottled as exc:
-            self.session.rollback()
+            self._rollback_if_needed()
             raise TooManyAuthenticationAttempts() from exc
 
     def verify_passkey_authentication(
@@ -248,15 +263,23 @@ class AuthService:
         client_key: str,
     ) -> SessionResult:
         throttle_key = f"ip:{client_key}"
+
         try:
             with self.session.begin():
                 self.throttle.check(throttle_key)
-                expected_challenge = self.challenges.consume(
-                    token=challenge_token,
-                    purpose=ChallengePurpose.AUTHENTICATION,
-                    user_id=None,
-                )
-                credential_id = self._credential_id(credential)
+        except AuthenticationThrottled as exc:
+            self._rollback_if_needed()
+            raise TooManyAuthenticationAttempts() from exc
+
+        try:
+            expected_challenge = self._consume_challenge_committed(
+                token=challenge_token,
+                purpose=ChallengePurpose.AUTHENTICATION,
+                user_id=None,
+            )
+            credential_id = self._credential_id(credential)
+
+            with self.session.begin():
                 stored = self.session.scalar(
                     select(PasskeyCredentialModel)
                     .where(
@@ -266,7 +289,6 @@ class AuthService:
                     .with_for_update()
                 )
                 if stored is None:
-                    self.throttle.record_failure(throttle_key)
                     raise InvalidCredentials()
 
                 self._verify_user_handle(credential, stored.user_id)
@@ -278,7 +300,6 @@ class AuthService:
                 )
                 backup_eligible = verification.credential_device_type == CredentialDeviceType.MULTI_DEVICE
                 if backup_eligible != stored.backup_eligible:
-                    self.throttle.record_failure(throttle_key)
                     raise InvalidCredentials()
 
                 stored.sign_count = verification.new_sign_count
@@ -287,15 +308,13 @@ class AuthService:
                 self.throttle.record_success(throttle_key)
                 issued_session = self.sessions.issue(user_id=stored.user_id)
                 return self._session_result(issued_session)
-        except AuthenticationThrottled as exc:
-            self.session.rollback()
-            raise TooManyAuthenticationAttempts() from exc
         except InvalidCredentials:
+            self._rollback_if_needed()
+            self._record_failure_committed(throttle_key)
             raise
         except (ChallengeError, InvalidAuthenticationResponse, KeyError, ValueError) as exc:
-            self.session.rollback()
-            # The challenge may be invalid before a transaction can safely record a
-            # failure, so the client receives only the generic credential error.
+            self._rollback_if_needed()
+            self._record_failure_committed(throttle_key)
             raise InvalidCredentials() from exc
 
     # ----- Password fallback ---------------------------------------------------
@@ -314,13 +333,13 @@ class AuthService:
                 authenticated = self.sessions.authenticate(bearer_token)
                 self._upsert_password(authenticated.user_id, canonical_login, encoded_hash)
         except SessionCredentialError as exc:
-            self.session.rollback()
+            self._rollback_if_needed()
             raise InvalidCredentials() from exc
         except (LoginNameError, ValueError) as exc:
-            self.session.rollback()
+            self._rollback_if_needed()
             raise InvalidCredentials() from exc
         except IntegrityError as exc:
-            self.session.rollback()
+            self._rollback_if_needed()
             raise CredentialConflict() from exc
 
     def password_login(
@@ -339,6 +358,12 @@ class AuthService:
         try:
             with self.session.begin():
                 self.throttle.check(*keys)
+        except AuthenticationThrottled as exc:
+            self._rollback_if_needed()
+            raise TooManyAuthenticationAttempts() from exc
+
+        try:
+            with self.session.begin():
                 credential = self.session.scalar(
                     select(PasswordCredentialModel)
                     .where(
@@ -348,7 +373,6 @@ class AuthService:
                     .with_for_update()
                 )
                 if credential is None or not self.passwords.verify(credential.password_hash, password):
-                    self.throttle.record_failure(*keys)
                     raise InvalidCredentials()
 
                 if self.passwords.needs_rehash(credential.password_hash):
@@ -356,14 +380,17 @@ class AuthService:
                 self.throttle.record_success(*keys)
                 issued_session = self.sessions.issue(user_id=credential.user_id)
                 return self._session_result(issued_session)
-        except AuthenticationThrottled as exc:
-            self.session.rollback()
-            raise TooManyAuthenticationAttempts() from exc
+        except InvalidCredentials:
+            self._rollback_if_needed()
+            self._record_failure_committed(*keys)
+            raise
 
     def authenticate_session(self, bearer_token: str) -> AuthenticatedSession:
         try:
-            return self.sessions.authenticate(bearer_token)
+            with self.session.begin():
+                return self.sessions.authenticate(bearer_token)
         except SessionCredentialError as exc:
+            self._rollback_if_needed()
             raise InvalidCredentials() from exc
 
     def logout(self, bearer_token: str) -> None:
@@ -371,6 +398,36 @@ class AuthService:
             self.sessions.revoke(bearer_token)
 
     # ----- Internal helpers ----------------------------------------------------
+
+    def _consume_challenge_committed(
+        self,
+        *,
+        token: str,
+        purpose: ChallengePurpose,
+        user_id: str | None,
+    ) -> bytes:
+        with self.session.begin():
+            return self.challenges.consume(
+                token=token,
+                purpose=purpose,
+                user_id=user_id,
+            )
+
+    def _record_failure_committed(self, *keys: str) -> None:
+        self._rollback_if_needed()
+        try:
+            with self.session.begin():
+                self.throttle.record_failure(*keys)
+        except IntegrityError:
+            # A concurrent first failure may race on the digest row. Retrying once
+            # after rollback preserves the failure signal without requiring Redis.
+            self.session.rollback()
+            with self.session.begin():
+                self.throttle.record_failure(*keys)
+
+    def _rollback_if_needed(self) -> None:
+        if self.session.in_transaction():
+            self.session.rollback()
 
     def _ready_instance(self, *, lock: bool = False) -> InstanceBootstrapModel:
         statement = select(InstanceBootstrapModel).where(InstanceBootstrapModel.id == BOOTSTRAP_ROW_ID)
