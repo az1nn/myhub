@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sync.model import GraphModel, GraphNode, NodeRef
+from sync.model import GraphModel, Node, NodeRef
 
 
 @dataclass(frozen=True)
@@ -72,7 +72,7 @@ def validate_graph(graph: GraphModel) -> list[ValidationIssue]:
     return issues
 
 
-def _completed_realized_specs(graph: GraphModel, requirement: GraphNode) -> list[NodeRef]:
+def _completed_realized_specs(graph: GraphModel, requirement: Node) -> list[NodeRef]:
     completed: list[NodeRef] = []
     for realized in graph.outgoing(requirement.ref, "REALIZED_BY"):
         task_edges = graph.outgoing(realized.target, "DECOMPOSED_INTO")
@@ -97,7 +97,7 @@ def _has_real_validation_evidence(graph: GraphModel, specs: list[NodeRef]) -> bo
     return False
 
 
-def _pr_requires_task_traceability(graph: GraphModel, pr: GraphNode) -> bool:
+def _pr_requires_task_traceability(graph: GraphModel, pr: Node) -> bool:
     changes = graph.outgoing(pr.ref, "CHANGES")
     if not changes:
         # If change classification is unavailable, fail closed rather than
