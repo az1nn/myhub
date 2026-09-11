@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 set -euo pipefail
-python engineering-graph/validate/validate.py
+PYTHONPATH=engineering-graph python -m validate.validate --repo-root . "$@"
