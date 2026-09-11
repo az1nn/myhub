@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "myhub-api"
+version = "0.1.0"
+description = "MyHub self-hosted family coordination API"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.141.1,<0.142",
+  "uvicorn[standard]>=0.35,<1",
+  "SQLAlchemy>=2.0.52,<2.1",
+  "alembic>=1.19.2,<2",
+  "psycopg[binary]>=3.3.5,<4",
+  "pydantic-settings>=2.15,<3",
+  "cryptography>=46,<47",
+]
+
+[project.optional-dependencies]
+test = [
+  "httpx>=0.28,<1",
+  "pytest>=8,<10",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["myhub*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"
