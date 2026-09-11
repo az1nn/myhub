@@ -26,9 +26,14 @@ def test_concurrent_initial_owner_enrollment_has_one_winner() -> None:
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
 
+    # The test seeds rows directly through independent ORM models without
+    # relationship() edges. Flush explicitly in FK dependency order so the
+    # fixture itself cannot race SQLAlchemy's unit-of-work insert ordering.
     with Session(engine) as session, session.begin():
         session.add(FamilyModel(id=FAMILY_ID, name="Concurrent Family"))
         session.add(UserModel(id=OWNER_ID, display_name="Initial Owner"))
+        session.flush()
+
         session.add(
             MembershipModel(
                 id=MEMBERSHIP_ID,
@@ -38,6 +43,8 @@ def test_concurrent_initial_owner_enrollment_has_one_winner() -> None:
                 status="ACTIVE",
             )
         )
+        session.flush()
+
         session.add(
             InstanceBootstrapModel(
                 id=1,
@@ -49,6 +56,7 @@ def test_concurrent_initial_owner_enrollment_has_one_winner() -> None:
                 owner_membership_id=MEMBERSHIP_ID,
             )
         )
+        session.flush()
 
     settings = Settings(database_url=url, bootstrap_token=TOKEN)
 
