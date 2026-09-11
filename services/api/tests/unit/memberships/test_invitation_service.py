@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import timedelta, timezone
 
 import pytest
 from sqlalchemy.orm import Session
@@ -45,7 +45,10 @@ def test_creation_requires_capability_and_never_persists_raw_secret(engine) -> N
             persisted = session.get(InvitationModel, created.invitation_id)
             assert persisted is not None
             assert persisted.token_hash not in created.raw_token
-            assert created.expires_at - persisted.created_at == timedelta(days=1)
+            persisted_created_at = persisted.created_at
+            if persisted_created_at.tzinfo is None:
+                persisted_created_at = persisted_created_at.replace(tzinfo=timezone.utc)
+            assert created.expires_at - persisted_created_at == timedelta(days=1)
 
         with pytest.raises(MembershipUnauthorized):
             with session.begin():
