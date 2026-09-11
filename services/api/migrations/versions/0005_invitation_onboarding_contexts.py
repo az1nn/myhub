@@ -1,12 +1,12 @@
 """add invitation onboarding contexts
 
-Revision ID: 0005_invitation_onboarding_contexts
+Revision ID: 0005_invite_onboarding_ctx
 Revises: 0004_membership_invitations
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0005_invitation_onboarding_contexts"
+revision = "0005_invite_onboarding_ctx"
 down_revision = "0004_membership_invitations"
 branch_labels = None
 depends_on = None
