@@ -27,6 +27,59 @@ def test_detects_task_dependency_cycle():
     assert "TASK_DEPENDENCY_CYCLE" in codes(graph)
 
 
+def test_pending_spec_does_not_require_validation_evidence_yet():
+    graph = GraphModel()
+    req = graph.upsert_node("Requirement", "id", "REQ-PLANNED", critical=True)
+    spec = graph.upsert_node("Spec", "id", "SPEC-PLANNED", status="active")
+    task = graph.upsert_node("Task", "id", "TASK-PLANNED", status="pending", source_path="specs/planned/tasks.md")
+    graph.add_edge(req, "REALIZED_BY", spec)
+    graph.add_edge(spec, "DECOMPOSED_INTO", task)
+
+    assert "CRITICAL_REQUIREMENT_WITHOUT_VALIDATION" not in codes(graph)
+
+
+def test_completed_spec_requires_real_validation_evidence():
+    graph = GraphModel()
+    req = graph.upsert_node("Requirement", "id", "REQ-DONE", critical=True)
+    spec = graph.upsert_node("Spec", "id", "SPEC-DONE", status="active")
+    task = graph.upsert_node("Task", "id", "TASK-DONE", status="done", source_path="specs/done/tasks.md")
+    code = graph.upsert_node("CodeArtifact", "path", "src/x.py", exists=True)
+    graph.add_edge(req, "REALIZED_BY", spec)
+    graph.add_edge(spec, "DECOMPOSED_INTO", task)
+    graph.add_edge(task, "IMPLEMENTED_BY", code)
+
+    assert "CRITICAL_REQUIREMENT_WITHOUT_VALIDATION" in codes(graph)
+
+
+def test_planning_only_pr_may_exist_without_implements_edge():
+    graph = GraphModel()
+    pr = graph.upsert_node("PullRequest", "number", 10)
+    changed = graph.upsert_node("CodeArtifact", "path", "specs/008-push-notifications/spec.md", exists=True)
+    graph.add_edge(pr, "CHANGES", changed)
+
+    assert "PR_WITHOUT_TASK_TRACEABILITY" not in codes(graph)
+
+
+def test_code_pr_still_requires_task_traceability():
+    graph = GraphModel()
+    pr = graph.upsert_node("PullRequest", "number", 11)
+    changed = graph.upsert_node("CodeArtifact", "path", "services/api/src/myhub/app.py", exists=True)
+    graph.add_edge(pr, "CHANGES", changed)
+
+    assert "PR_WITHOUT_TASK_TRACEABILITY" in codes(graph)
+
+
+def test_code_pr_with_implements_edge_passes_pr_traceability():
+    graph = GraphModel()
+    pr = graph.upsert_node("PullRequest", "number", 12)
+    task = graph.upsert_node("Task", "id", "TASK-12", status="pending", source_path="specs/x/tasks.md")
+    changed = graph.upsert_node("CodeArtifact", "path", "services/api/src/myhub/app.py", exists=True)
+    graph.add_edge(pr, "CHANGES", changed)
+    graph.add_edge(pr, "IMPLEMENTS", task)
+
+    assert "PR_WITHOUT_TASK_TRACEABILITY" not in codes(graph)
+
+
 def test_valid_traceability_passes():
     graph = GraphModel()
     req = graph.upsert_node("Requirement", "id", "REQ-1", critical=True)

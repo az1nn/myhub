@@ -53,6 +53,13 @@ task_metadata:
       - engineering-graph/tests/test_model.py
       - engineering-graph/tests/test_parsers.py
       - engineering-graph/tests/test_invariants.py
+  TASK-ENG-007:
+    status: done
+    depends_on: [TASK-ENG-004, TASK-ENG-005]
+    implements:
+      - engineering-graph/validate/invariants.py
+    validated_by:
+      - engineering-graph/tests/test_invariants.py
 ---
 
 # Tasks: Engineering Graph V1
@@ -63,3 +70,4 @@ task_metadata:
 - [x] TASK-ENG-004 Implement graph invariant validation and DAG cycle detection.
 - [x] TASK-ENG-005 Capture GitHub PR traceability and changed artifacts.
 - [x] TASK-ENG-006 Wire tests, Neo4j sync and validation into CI.
+- [x] TASK-ENG-007 Make Architecture Gate lifecycle-aware for incremental specs and planning-only PRs.
