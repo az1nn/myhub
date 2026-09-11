@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     password_argon2_time_cost: int = 2
     password_argon2_parallelism: int = 1
 
+    auth_login_max_failures: int = 5
+    auth_login_window_seconds: int = 5 * 60
+    auth_login_block_seconds: int = 15 * 60
+
     android_package_name: str | None = None
     android_sha256_cert_fingerprints: str = ""
 
@@ -70,6 +74,20 @@ class Settings(BaseSettings):
     def validate_argon2_parallelism(cls, value: int) -> int:
         if value < 1:
             raise ValueError("MYHUB_PASSWORD_ARGON2_PARALLELISM must be at least 1")
+        return value
+
+    @field_validator("auth_login_max_failures")
+    @classmethod
+    def validate_login_failures(cls, value: int) -> int:
+        if not 3 <= value <= 20:
+            raise ValueError("MYHUB_AUTH_LOGIN_MAX_FAILURES must be between 3 and 20")
+        return value
+
+    @field_validator("auth_login_window_seconds", "auth_login_block_seconds")
+    @classmethod
+    def validate_login_timing(cls, value: int) -> int:
+        if not 30 <= value <= 24 * 60 * 60:
+            raise ValueError("login throttle timings must be between 30 seconds and 24 hours")
         return value
 
 
