@@ -15,6 +15,7 @@ from myhub.modules.memberships.repository import (
 TENANT_A = "40000000-0000-0000-0000-000000000001"
 TENANT_B = "40000000-0000-0000-0000-000000000002"
 USER_ID = "40000000-0000-0000-0000-000000000003"
+MEMBERSHIP_ID = "40000000-0000-0000-0000-000000000004"
 
 
 def _seed(session: Session) -> None:
@@ -81,20 +82,21 @@ def test_capability_check_uses_active_tenant_membership(engine) -> None:
         _seed(session)
         repository = MembershipRepository(session)
         with session.begin():
-            owner = MembershipModel(
-                id="40000000-0000-0000-0000-000000000004",
-                tenant_id=TENANT_A,
-                user_id=USER_ID,
-                role="Owner",
-                status="ACTIVE",
+            session.add(
+                MembershipModel(
+                    id=MEMBERSHIP_ID,
+                    tenant_id=TENANT_A,
+                    user_id=USER_ID,
+                    role="Owner",
+                    status="ACTIVE",
+                )
             )
-            session.add(owner)
 
         assert repository.require_capability(
             tenant_id=TENANT_A,
             user_id=USER_ID,
             capability="members.invite",
-        ).id == owner.id
+        ).id == MEMBERSHIP_ID
 
         with pytest.raises(MembershipUnauthorized):
             repository.require_capability(
@@ -103,7 +105,12 @@ def test_capability_check_uses_active_tenant_membership(engine) -> None:
                 capability="members.invite",
             )
 
+        # SELECTs above open an implicit SQLAlchemy 2 transaction. Close that
+        # read boundary before starting the explicit membership-state mutation.
+        session.rollback()
         with session.begin():
+            owner = session.get(MembershipModel, MEMBERSHIP_ID)
+            assert owner is not None
             owner.status = "REMOVED"
 
         with pytest.raises(MembershipUnauthorized):
