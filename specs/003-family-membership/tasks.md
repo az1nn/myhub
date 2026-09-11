@@ -7,26 +7,64 @@ depends_on:
   - PLAN-003-FAMILY-MEMBERSHIP
 task_metadata:
   TASK-003-01:
+    status: done
     priority: 1
     depends_on: []
+    implements:
+      - services/api/migrations/versions/0004_membership_invitations.py
+      - services/api/src/myhub/infrastructure/db/models.py
+    validated_by:
+      - services/api/tests/unit/memberships/test_invitation_model.py
   TASK-003-02:
+    status: done
     priority: 1
     depends_on: []
+    implements:
+      - services/api/src/myhub/modules/memberships/policy.py
+    validated_by:
+      - services/api/tests/unit/memberships/test_policy.py
   TASK-003-03:
+    status: done
     priority: 2
     depends_on: [TASK-003-01, TASK-003-02]
+    implements:
+      - services/api/src/myhub/modules/invitations/tokens.py
+    validated_by:
+      - services/api/tests/unit/memberships/test_invitation_tokens.py
   TASK-003-04:
+    status: done
     priority: 2
     depends_on: [TASK-003-01]
+    implements:
+      - services/api/src/myhub/modules/memberships/repository.py
+    validated_by:
+      - services/api/tests/unit/memberships/test_repository.py
   TASK-003-05:
+    status: done
     priority: 3
     depends_on: [TASK-003-03]
+    implements:
+      - services/api/src/myhub/modules/invitations/service.py
+    validated_by:
+      - services/api/tests/unit/memberships/test_invitation_service.py
   TASK-003-06:
+    status: done
     priority: 3
     depends_on: [TASK-003-03]
+    implements:
+      - services/api/src/myhub/modules/invitations/service.py
+    validated_by:
+      - services/api/tests/unit/memberships/test_invitation_service.py
   TASK-003-07:
+    status: done
     priority: 3
     depends_on: [TASK-003-03]
+    implements:
+      - services/api/migrations/versions/0005_invitation_onboarding_contexts.py
+      - services/api/src/myhub/infrastructure/db/models.py
+      - services/api/src/myhub/modules/invitations/onboarding.py
+    validated_by:
+      - services/api/tests/unit/memberships/test_onboarding_context.py
   TASK-003-08:
     priority: 4
     depends_on: [TASK-003-05, TASK-003-06]
@@ -34,8 +72,13 @@ task_metadata:
     priority: 4
     depends_on: [TASK-003-05, TASK-003-07]
   TASK-003-10:
+    status: done
     priority: 4
     depends_on: [TASK-003-02]
+    implements:
+      - services/api/src/myhub/modules/memberships/lifecycle.py
+    validated_by:
+      - services/api/tests/unit/memberships/test_membership_lifecycle.py
   TASK-003-11:
     priority: 5
     depends_on: [TASK-003-08, TASK-003-09, TASK-003-10]
@@ -52,16 +95,16 @@ task_metadata:
 
 # Tasks: Family Membership & Invitations
 
-- [ ] TASK-003-01 Add invitation persistence model/migration with expiry, revocation and one-use state.
-- [ ] TASK-003-02 Centralize initial role-to-capability policy for `Owner`, `Adult`, `Member` and membership-state authorization checks.
-- [ ] TASK-003-03 Implement secure invitation token generation, hashing, lookup and constant-time verification.
-- [ ] TASK-003-04 Implement tenant-scoped membership repository invariants and duplicate-membership protection.
-- [ ] TASK-003-05 Implement capability-protected invitation creation and revocation.
-- [ ] TASK-003-06 Implement minimal invitation preview/validation without family-data disclosure.
-- [ ] TASK-003-07 Implement short-lived invitation onboarding context integrated with SPEC-002 credential enrollment.
+- [x] TASK-003-01 Add invitation persistence model/migration with expiry, revocation and one-use state.
+- [x] TASK-003-02 Centralize initial role-to-capability policy for `Owner`, `Adult`, `Member` and membership-state authorization checks.
+- [x] TASK-003-03 Implement secure invitation token generation, hashing, lookup and constant-time verification.
+- [x] TASK-003-04 Implement tenant-scoped membership repository invariants and duplicate-membership protection.
+- [x] TASK-003-05 Implement capability-protected invitation creation and revocation.
+- [x] TASK-003-06 Implement minimal invitation preview/validation without family-data disclosure.
+- [x] TASK-003-07 Implement short-lived invitation onboarding context integrated with SPEC-002 credential enrollment.
 - [ ] TASK-003-08 Implement atomic invitation acceptance + User/Membership/credential/session establishment.
 - [ ] TASK-003-09 Implement concurrent single-use protection and safe retry semantics.
-- [ ] TASK-003-10 Implement membership removal with last-Owner protection and immediate authorization-state effect.
+- [x] TASK-003-10 Implement membership removal with last-Owner protection and immediate authorization-state effect.
 - [ ] TASK-003-11 Add creation/expiry/revocation/acceptance/concurrency/role integration tests.
 - [ ] TASK-003-12 Add tenant isolation, removal, last-Owner and no-location-consent regression tests.
 - [ ] TASK-003-13 Publish invitation/membership API contracts, QR/deep-link rules and operator docs; sync graph traceability.

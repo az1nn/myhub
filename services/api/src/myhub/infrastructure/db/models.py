@@ -75,6 +75,25 @@ class InvitationModel(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
 
 
+class InvitationOnboardingContextModel(Base):
+    __tablename__ = "invitation_onboarding_contexts"
+    __table_args__ = (
+        UniqueConstraint("secret_hash", name="uq_invitation_onboarding_secret_hash"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    invitation_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("invitations.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    secret_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    purpose: Mapped[str] = mapped_column(String(32), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    consumed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+
+
 class PasskeyCredentialModel(Base):
     __tablename__ = "passkey_credentials"
     __table_args__ = (
