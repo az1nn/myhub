@@ -245,6 +245,7 @@ class InvitationAcceptanceService:
                         InvitationOnboardingContextModel.expires_at > accepted_at,
                     )
                     .values(consumed_at=accepted_at)
+                    .execution_options(synchronize_session=False)
                 )
                 if context_result.rowcount != 1:
                     raise InvitationAcceptanceUnavailable("onboarding context unavailable")
@@ -262,6 +263,7 @@ class InvitationAcceptanceService:
                         consumed_at=accepted_at,
                         consumed_by_user_id=user_id,
                     )
+                    .execution_options(synchronize_session=False)
                 )
                 if invitation_result.rowcount != 1:
                     raise InvitationAcceptanceUnavailable("invitation unavailable")
