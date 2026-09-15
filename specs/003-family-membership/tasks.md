@@ -66,11 +66,21 @@ task_metadata:
     validated_by:
       - services/api/tests/unit/memberships/test_onboarding_context.py
   TASK-003-08:
+    status: done
     priority: 4
     depends_on: [TASK-003-05, TASK-003-06]
+    implements:
+      - services/api/src/myhub/modules/invitations/acceptance.py
+    validated_by:
+      - services/api/tests/unit/memberships/test_invitation_acceptance.py
   TASK-003-09:
+    status: done
     priority: 4
     depends_on: [TASK-003-05, TASK-003-07]
+    implements:
+      - services/api/src/myhub/modules/invitations/acceptance.py
+    validated_by:
+      - services/api/tests/unit/memberships/test_invitation_acceptance.py
   TASK-003-10:
     status: done
     priority: 4
@@ -102,8 +112,8 @@ task_metadata:
 - [x] TASK-003-05 Implement capability-protected invitation creation and revocation.
 - [x] TASK-003-06 Implement minimal invitation preview/validation without family-data disclosure.
 - [x] TASK-003-07 Implement short-lived invitation onboarding context integrated with SPEC-002 credential enrollment.
-- [ ] TASK-003-08 Implement atomic invitation acceptance + User/Membership/credential/session establishment.
-- [ ] TASK-003-09 Implement concurrent single-use protection and safe retry semantics.
+- [x] TASK-003-08 Implement atomic invitation acceptance + User/Membership/credential/session establishment.
+- [x] TASK-003-09 Implement concurrent single-use protection and safe retry semantics.
 - [x] TASK-003-10 Implement membership removal with last-Owner protection and immediate authorization-state effect.
 - [ ] TASK-003-11 Add creation/expiry/revocation/acceptance/concurrency/role integration tests.
 - [ ] TASK-003-12 Add tenant isolation, removal, last-Owner and no-location-consent regression tests.
